@@ -1,0 +1,28 @@
+{
+    "name": "Yd/RabbitMqBundle",
+    "description": "yd_rabbitmq封装扩展",
+    "keywords": [
+        "php",
+        "rabbitmq",
+        "yundun"
+    ],
+    "homepage": "https://github.com/yundun-php/rabbitmq.git",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "adulinlin",
+            "email": "duyifan@163.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Yd\\RabbitMqBundle\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "php-amqplib/php-amqplib": "2.10.0"
+    },
+    "require-dev": {
+    }
+}
