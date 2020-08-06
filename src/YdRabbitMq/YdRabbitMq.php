@@ -7,14 +7,13 @@
  * Date: 2020/7/3 16:31
  */
 
-namespace Yd\RabbitMqBundle;
+namespace Yd;
 
-use Mockery\Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Channel\AMQPChannel;
 
-class RabbitMqBundle {
+class YdRabbitMq {
     const  MAX_ATTEMPTS = 3;
     const  CONSUMER_TAG = "consumer";
     protected $config;
@@ -142,7 +141,7 @@ class RabbitMqBundle {
             $this->channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
             $this->channel->wait_for_pending_acks_returns();
         } catch (\Exception $e) {
-            if($this->isConnected()){
+            if ($this->isConnected()) {
                 throw new \Exception($e->getMessage());
             }
             $this->close();
@@ -165,7 +164,6 @@ class RabbitMqBundle {
                 $this->channel->wait();
             }
         } catch (\Exception $e) {
-            
             if ($this->isConnected()) {
                 $this->logInfo("rabbitmq操作失败:" . $e->getMessage());
                 throw new \Exception($e->getMessage());
@@ -209,9 +207,13 @@ class RabbitMqBundle {
         if ($this->logger) {
             $this->logger->$type($msg);
         } else {
-            trigger_error($msg);
+            $log_type   = [
+                'info'  => 'E_USER_NOTICE',
+                'error' => 'E_USER_ERROR',
+            ];
+            $error_type = isset($log_type[$type]) ? $log_type[$type] : E_USER_WARNING;
+            trigger_error("YdRabbitMq".$msg, $error_type);
         }
-
     }
 
 }

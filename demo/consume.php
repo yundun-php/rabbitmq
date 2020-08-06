@@ -7,8 +7,9 @@
  * Date: 2020/7/9 11:28
  */
 require_once '../vendor/autoload.php';
+require_once '../src/YdRabbitMq/YdRabbitMq.php';
 
-use Yd\RabbitMqBundle\RabbitMqBundle;
+use Yd\YdRabbitMq;
 
 $logger = new \Monolog\Logger('ydrabbitmqc');   //测试使用 实际代码中使用loges相关
 $logger->pushHandler(new \Monolog\Handler\StreamHandler('/tmp/ydrabbitmqa.log', \Monolog\Logger::INFO));
@@ -25,13 +26,12 @@ $queueConf = [
     "exchange"  => 'ex.adu',
     "routeKey"  => 'rk.adu.test'
 ];
-$rabbitMqConsume = new RabbitMqBundle($config, $queueConf, $options);
+$rabbitMqConsume = new YdRabbitMq($config, $queueConf, $options);
 $rabbitMqConsume->setLogger($logger,true);
 
 function printrMessage($message) {
     var_dump($message->body);
     $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
-    sleep(3);
 }
 $i=0;
 while (1){

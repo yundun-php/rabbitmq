@@ -7,8 +7,9 @@
  * Date: 2020/7/9 11:28
  */
 require_once '../vendor/autoload.php';
+require_once '../src/YdRabbitMq/YdRabbitMq.php';
 
-use Yd\RabbitMqBundle\RabbitMqBundle;
+use Yd\YdRabbitMq;
 
 $logger = new \Monolog\Logger('ydrabbitmq');   //测试使用 实际代码中使用loges相关
 $logger->pushHandler(new \Monolog\Handler\StreamHandler('/tmp/ydrabbitmq.log', \Monolog\Logger::INFO));
@@ -27,10 +28,10 @@ $queueConf = [
 ];
 $options   = [];
 
-$rabbitMqPublish = new RabbitMqBundle($config, $queueConf, $options);
+$rabbitMqPublish = new YdRabbitMq($config, $queueConf, $options);
 $rabbitMqPublish->setLogger($logger,true);
 $i               = 1;
-while ($i < 20) {
+while ($i < 2) {
     $msg = [
         'data' => "test" . mt_rand(1000, 9999),
         'time' => date('Y-m-d H:i:s')
