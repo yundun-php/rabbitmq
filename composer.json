@@ -1,5 +1,5 @@
 {
-    "name": "Yd/RabbitMqBundle",
+    "name": "yd/ydrabbitmq",
     "description": "yd_rabbitmq封装扩展",
     "keywords": [
         "php",
@@ -16,7 +16,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "Yd\\RabbitMqBundle\\": "src/"
+            "Yd\\": "src/ydrabbitmq"
         }
     },
     "require": {

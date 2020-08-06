@@ -7,7 +7,7 @@
  * Date: 2020/7/9 11:28
  */
 require_once '../vendor/autoload.php';
-require_once '../src/YdRabbitMq/YdRabbitMq.php';
+require_once '../src/ydrabbitmq/YdRabbitMq.php';
 
 use Yd\YdRabbitMq;
 
