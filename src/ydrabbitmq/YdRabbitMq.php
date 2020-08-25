@@ -191,6 +191,13 @@ class YdRabbitMq {
 
     public function close() {
         $this->logInfo("断开连接");
+        try{
+            $this->connection->close();
+            $this->channel->close();
+        }catch (\Exception $e){
+            $this->logInfo("rabbitmq关闭连接异常");
+        }
+
         $this->connection = null;
         $this->channel    = null;
     }
