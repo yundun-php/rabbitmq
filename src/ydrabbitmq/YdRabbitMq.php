@@ -192,8 +192,14 @@ class YdRabbitMq {
     public function close() {
         $this->logInfo("断开连接");
         try{
-            $this->connection->close();
-            $this->channel->close();
+            if(is_object($this->connection)
+                && $this->connection instanceof AMQPStreamConnection){
+                $this->connection->close();
+            }
+            if(is_object($this->channel) && $this->channel instanceof AMQPChannel){
+                $this->channel->close();
+            }
+            $this->logInfo("rabbitmq关闭连接正常");
         }catch (\Exception $e){
             $this->logInfo("rabbitmq关闭连接异常");
         }
