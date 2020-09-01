@@ -186,21 +186,32 @@ class YdRabbitMq {
             $this->logger   = $logger;
             $this->logDebug = $logDebug;
         }
+    }
 
+    public function setQueueConf($queueConf = []) {
+        if (isset($queueConf['exchange']) && !empty($queueConf['exchange'])) {
+            $this->exchange = $queueConf['exchange'];
+        }
+        if (isset($queueConf['routeKey']) && !empty($queueConf['routeKey'])) {
+            $this->routeKey = $queueConf['routeKey'];
+        }
+        if (isset($queueConf['queueName']) && !empty($queueConf['queueName'])) {
+            $this->queueName = $queueConf['queueName'];
+        }
     }
 
     public function close() {
         $this->logInfo("断开连接");
-        try{
-            if(is_object($this->connection)
-                && $this->connection instanceof AMQPStreamConnection){
+        try {
+            if (is_object($this->connection)
+                && $this->connection instanceof AMQPStreamConnection) {
                 $this->connection->close();
             }
-            if(is_object($this->channel) && $this->channel instanceof AMQPChannel){
+            if (is_object($this->channel) && $this->channel instanceof AMQPChannel) {
                 $this->channel->close();
             }
             $this->logInfo("rabbitmq关闭连接正常");
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             $this->logInfo("rabbitmq关闭连接异常");
         }
 
@@ -225,7 +236,7 @@ class YdRabbitMq {
                 'error' => 'E_USER_ERROR',
             ];
             $error_type = isset($log_type[$type]) ? $log_type[$type] : E_USER_WARNING;
-            trigger_error("YdRabbitMq".$msg, $error_type);
+            trigger_error("YdRabbitMq" . $msg, $error_type);
         }
     }
 
