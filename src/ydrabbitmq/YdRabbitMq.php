@@ -151,13 +151,13 @@ class YdRabbitMq {
         return $flag;
     }
 
-    public function consume($callback, $consumerTag = '') {
+    public function consume($callback, $consumerTag = '', $prefetch_count = 1) {
         $this->initConnection();
         try {
             if (empty($consumerTag)) {
                 $consumerTag = self::CONSUMER_TAG . "_" . mb_substr(md5(time()), 0, 5);
             }
-            $this->channel->basic_qos(null, 1, null);
+            $this->channel->basic_qos(null, $prefetch_count, null);
             $this->channel->basic_consume($this->queueName, $consumerTag, false, false, false, false, $callback);
 
             while ($this->channel->is_consuming()) {
