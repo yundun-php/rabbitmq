@@ -172,6 +172,24 @@ class YdRabbitMq {
         }
     }
 
+    public function batchGet($limit = 200) {
+        $this->initConnection();
+        $messageCount = $this->channel->queue_declare($this->queueName, false, true, false, false);
+        if (!$messageCount) {
+            return [];
+        }
+        $i    = 0;
+        $max  = $limit < 200 ? $limit : 200;
+        $data = [];
+        while ($i < $messageCount[1] && $i < $max) {
+            $msg = $this->channel->basic_get($this->queueName);
+            $this->channel->basic_ack($msg->delivery_info['delivery_tag']);
+            $data[] = json_decode($msg->body, true);
+            $i++;
+        }
+        return $data;
+    }
+
     public function isConnected() {
         if (!is_null($this->connection) && $this->connection->isConnected()) {
             $this->logInfo("连接正常");
