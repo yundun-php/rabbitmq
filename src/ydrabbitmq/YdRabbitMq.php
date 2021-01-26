@@ -72,6 +72,7 @@ class YdRabbitMq {
                     $this->options['locale'],
                     $this->options['connection_timeout'],
                     $this->options['read_write_timeout'],
+                    $this->options['context'],
                     $this->options['keepalive'],
                     $this->options['heartbeat']
                 );
