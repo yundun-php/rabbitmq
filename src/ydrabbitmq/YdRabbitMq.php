@@ -45,6 +45,7 @@ class YdRabbitMq {
         'keepalive'          => true,
         'heartbeat'          => 0
     ];
+    private static $_objs;
 
     public function __construct($connectionConfig = [], $queueConf = [], $options = []) {
         $this->config    = array_merge($this->defaultsConfig, $connectionConfig);
@@ -52,6 +53,15 @@ class YdRabbitMq {
         $this->exchange  = $queueConf['exchange'];
         $this->routeKey  = $queueConf['routeKey'];
         $this->queueName = $queueConf['queueName'];
+    }
+
+    static public function obj(...$params) {
+        $key = isset($params[1]) ? md5(json_encode($params[1])) : 'default';
+        if (!isset(self::$_objs[$key])) {
+            $class             = new \ReflectionClass(__CLASS__);
+            self::$_objs[$key] = $class->newInstanceArgs($params);
+        }
+        return self::$_objs[$key];
     }
 
 
