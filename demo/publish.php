@@ -28,8 +28,8 @@ $queueConf = [
 ];
 $options   = [];
 
-//$rabbitMqPublish = new YdRabbitMq($config, $queueConf, $options);
-$rabbitMqPublish = YdRabbitMq::obj($config, $queueConf, $options);
+$rabbitMqPublish = new YdRabbitMq($config, $queueConf, $options);
+//$rabbitMqPublish = YdRabbitMq::obj($config, $queueConf, $options);
 $rabbitMqPublish->setLogger($logger,true);
 $i               = 1;
 while ($i < 2) {

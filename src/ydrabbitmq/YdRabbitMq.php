@@ -16,38 +16,27 @@ use PhpAmqpLib\Channel\AMQPChannel;
 class YdRabbitMq {
     const  MAX_ATTEMPTS = 3;
     const  CONSUMER_TAG = "consumer";
-    protected $config;
-    protected $options;
-    protected $connection         = null;
-    protected $channel            = null;
-    protected $queueName          = '';   //队列名称
-    protected $exchange           = '';    //交换机名称
-    protected $routeKey           = '';    //路由名称
-    protected $logger             = null;
-    protected $connectionAttempts = 0;
-    protected $logDebug           = false;
-    static public $conns = [];
-    static public $channels = [];
+    protected        $config;
+    protected        $options;
+    protected        $connection         = null;
+    protected        $channel            = null;
+    protected        $queueName          = '';   //队列名称
+    protected        $exchange           = '';    //交换机名称
+    protected        $routeKey           = '';    //路由名称
+    protected static $logger             = null;
+    protected static $connectionAttempts = 0;
+    protected static $logDebug           = false;
+    static public    $conns              = [];
+    static public    $channels           = [];
 
-    protected $defaultsConfig  = [
+    protected      $defaultsConfig  = [
         'host'     => '127.0.0.1',
         'port'     => 5672,
         'username' => 'guest',
         'password' => 'guest',
         'vhost'    => '/'
     ];
-    protected $defaultsOptions = [
-        'insist'             => false,
-        'login_method'       => 'AMQPLAIN',
-        'login_response'     => null,
-        'locale'             => 'en_US',
-        'connection_timeout' => 1.0,
-        'read_write_timeout' => 3.0,
-        'context'            => null,
-        'keepalive'          => true,
-        'heartbeat'          => 0
-    ];
-    static public $defaultOption = [
+    protected      $defaultsOptions = [
         'insist'             => false,
         'login_method'       => 'AMQPLAIN',
         'login_response'     => null,
@@ -77,135 +66,80 @@ class YdRabbitMq {
         return self::$_objs[$key];
     }
 
-    static public function connect($cfg, $options) {
-        $md5Key = json_encode($conf);
-        if(!isset(self::$conns[$md5Key])) {
-          self::$conns[$md5Key] = new AMQPStreamConnection(
-            $cfg['host'],
-            $cfg['port'],
-            $cfg['username'],
-            $cfg['password'],
-            $cfg['vhost'],
-            $options['insist'],
-            $options['login_method'],
-            $options['login_response'],
-            $options['locale'],
-            $options['connection_timeout'],
-            $options['read_write_timeout'],
-            $options['context'],
-            $options['keepalive'],
-            $options['heartbeat']
-          );
-        }
-        return return self::$conns[$md5Key];
-    }
-
-    static public function getChannel($cfg, $options, $exchange, $routeKey, $queue, $obj) {
-      $conn = self::connect($cfg, $options);
-      $md5Key = md5(json_encode([$cfg,$exchange, $routeKey, $queue]));
-      if(!isset(self::$channels[$md5Key])) {
-        try {
-          $channel = $conn->channel();
-          $channel->set_ack_handler(
-              function ($message) {
-                  $obj->logInfo("Message ack with content" . $message->getBody());
-              }
-          );
-          $channel->set_nack_handler(
-              function($message) {
-                  $obj->logInfo("Message nack with content" . $message->getBody());
-              }
-          );
-          $channel->set_return_listener(
-              function($replyCode, $replyText, $exchange, $routingKey, $message) {
-                  $obj->logInfo("投递异常返回数据set_return_listener");
-                  $obj->logInfo(var_export($replyCode, 1));
-                  $obj->logInfo(var_export($replyText, 1));
-                  $obj->logInfo(var_export($exchange, 1));
-                  $obj->logInfo(var_export($routingKey, 1));
-                  $obj->logInfo(var_export($message->getBody(), 1));
-              }
-          );
-          $channel->confirm_select();
-          self::$channels[$md5Key] = $channel;
-        } catch (\Exception $e) {
-          $obj->logInfo("rabbitmq连接异常" . var_export($e->getMessage(), 1));
-          $conn->close();
-          return null;
-      }
-      return self::$channels[$md5Key];
-    }
-
-    public function initConnection() {
-        if ((!$this->connection && !($this->connection instanceof AMQPStreamConnection))
-            || (!$this->channel && !($this->channel instanceof AMQPChannel))
-        ) {
+    static public function connect($config, $options) {
+        $connMd5Key = md5(json_encode($config));
+        if (!isset(self::$conns[$connMd5Key])) {
             try {
-                $this->connection = new AMQPStreamConnection(
-                    $this->config['host'],
-                    $this->config['port'],
-                    $this->config['username'],
-                    $this->config['password'],
-                    $this->config['vhost'],
-                    $this->options['insist'],
-                    $this->options['login_method'],
-                    $this->options['login_response'],
-                    $this->options['locale'],
-                    $this->options['connection_timeout'],
-                    $this->options['read_write_timeout'],
-                    $this->options['context'],
-                    $this->options['keepalive'],
-                    $this->options['heartbeat']
+                $Connection               = new AMQPStreamConnection(
+                    $config['host'],
+                    $config['port'],
+                    $config['username'],
+                    $config['password'],
+                    $config['vhost'],
+                    $options['insist'],
+                    $options['login_method'],
+                    $options['login_response'],
+                    $options['locale'],
+                    $options['connection_timeout'],
+                    $options['read_write_timeout'],
+                    $options['context'],
+                    $options['keepalive'],
+                    $options['heartbeat']
                 );
-                $this->channel    = $this->connection->channel();
-                $this->channel->set_ack_handler(
-                    function ($message) {
-                        $this->logInfo("Message ack with content" . $message->getBody());
-                    }
-                );
-                $this->channel->set_nack_handler(
-                    function ($message) {
-                        $this->logInfo("Message nack with content" . $message->getBody());
-                    }
-                );
-                $this->channel->set_return_listener(
-                    function ($replyCode, $replyText, $exchange, $routingKey, $message) {
-                        $this->logInfo("投递异常返回数据set_return_listener");
-                        $this->logInfo(var_export($replyCode, 1));
-                        $this->logInfo(var_export($replyText, 1));
-                        $this->logInfo(var_export($exchange, 1));
-                        $this->logInfo(var_export($routingKey, 1));
-                        $this->logInfo(var_export($message->getBody(), 1));
-                    }
-                );
-                $this->channel->confirm_select();
+                self::$conns[$connMd5Key] = $Connection;
             } catch (\Exception $e) {
-                $this->logInfo("rabbitmq连接异常" . var_export($e->getMessage(), 1));
-                while ($this->connectionAttempts < self::MAX_ATTEMPTS && !$this->isConnected()) {
-                    $this->close();
-                    $this->logInfo("重试连接第" . ($this->connectionAttempts + 1) . "次");
-                    $this->connectionAttempts++;
-                    $this->initConnection();
+                self::logInfo("rabbitmq连接异常" . var_export($e->getMessage(), 1));
+                while (self::$connectionAttempts < self::MAX_ATTEMPTS && !self::$conns[$connMd5Key]->isConnected()) {
+                    self::close($connMd5Key);
+                    self::logInfo("重试连接第" . (self::connectionAttempts + 1) . "次");
+                    self::$connectionAttempts++;
+                    self::connect($config, $options);
                 }
-                if (!$this->isConnected()) {
+                if (!self::isConnected($connMd5Key)) {
                     //发送告警??? todo
-                    $this->logInfo("连接三次失败" . var_export($e->getMessage(), 1));
-                    throw new \Exception($e->getMessage());
+                    self::logInfo("连接三次失败" . var_export($e->getMessage(), 1));
+                    throw $e;
                 }
+            }
+        }
+        return self::$conns[$connMd5Key];
+    }
 
-            }
-        }
-        if ($this->connection && ($this->connection instanceof AMQPStreamConnection) &&
-            $this->channel && ($this->channel instanceof AMQPChannel)
-        ) {
+    static public function getChannel($cfg, $options, $queue) {
+        $md5Key = md5(json_encode([$cfg, $queue]));
+        if (!isset(self::$channels[$md5Key])) {
+            $conn = self::connect($cfg, $options);
             try {
-                $this->connection->checkHeartBeat();
+                $channel = $conn->channel();
+                $channel->set_ack_handler(
+                    function ($message) {
+
+                        self::logInfo("Message ack with content" . $message->getBody());
+                    }
+                );
+                $channel->set_nack_handler(
+                    function ($message) {
+                        self::logInfo("Message nack with content" . $message->getBody());
+                    }
+                );
+                $channel->set_return_listener(
+                    function ($replyCode, $replyText, $exchange, $routingKey, $message) {
+                        self::logInfo("投递异常返回数据set_return_listener");
+                        self::logInfo(var_export($replyCode, 1));
+                        self::logInfo(var_export($replyText, 1));
+                        self::logInfo(var_export($exchange, 1));
+                        self::logInfo(var_export($routingKey, 1));
+                        self::logInfo(var_export($message->getBody(), 1));
+                    }
+                );
+                $channel->confirm_select();
+                self::$channels[$md5Key] = $channel;
             } catch (\Exception $e) {
-                $this->logInfo("checkHeartBeatException:" . $e->getMessage());
-                throw new \Exception($e->getMessage());
+                self::logInfo("getChannel Exception:" . $e->getMessage());
+                throw  $e;
             }
         }
-        $this->logInfo("连接结束");
+        return self::$channels[$md5Key];
     }
 
     public function publish($data) {
@@ -216,17 +150,19 @@ class YdRabbitMq {
         if (is_array($message)) {
             $message = json_encode($message);
         }
-        $this->initConnection();
-        $flag = true;
-        $msg  = new AMQPMessage($message);
+        $channel = self::getChannel($this->config, $this->options, $this->queueName);
+        $flag    = true;
+        $msg     = new AMQPMessage($message);
         try {
-            $this->channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
-            $this->channel->wait_for_pending_acks_returns();
+            $channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
+            $channel->wait_for_pending_acks_returns();
         } catch (\Exception $e) {
-            if ($this->isConnected()) {
-                throw new \Exception($e->getMessage());
+            $connMd5Key = md5(json_encode($this->config));
+            if (self::isConnected($connMd5Key)) {
+                throw $e;
             }
-            $this->close();
+            $channelMd5Key = md5(json_encode([$this->config, $this->queueName]));
+            self::close($connMd5Key, $channelMd5Key);
             return $this->publish($data);
         }
 
@@ -234,57 +170,71 @@ class YdRabbitMq {
     }
 
     public function consume($callback, $consumerTag = '', $prefetch_count = 1) {
-        $this->initConnection();
+        $channel = self::getChannel($this->config, $this->options, $this->queueName);
         try {
             if (empty($consumerTag)) {
                 $consumerTag = self::CONSUMER_TAG . "_" . mb_substr(md5(time()), 0, 5);
             }
-            $this->channel->basic_qos(null, $prefetch_count, null);
-            $this->channel->basic_consume($this->queueName, $consumerTag, false, false, false, false, $callback);
+            $channel->basic_qos(null, $prefetch_count, null);
+            $channel->basic_consume($this->queueName, $consumerTag, false, false, false, false, $callback);
 
-            while ($this->channel->is_consuming()) {
-                $this->channel->wait();
+            while ($channel->is_consuming()) {
+                $channel->wait();
             }
         } catch (\Exception $e) {
-            if ($this->isConnected()) {
-                $this->logInfo("rabbitmq操作失败:" . $e->getMessage());
-                throw new \Exception($e->getMessage());
+            $connMd5Key = md5(json_encode($this->config));
+            if (self::isConnected($connMd5Key)) {
+                self::logInfo("rabbitmq操作失败:" . $e->getMessage());
+                throw $e;
             }
-            $this->close();
+            $channelMd5Key = md5(json_encode([$this->config, $this->queueName]));
+            self::close($connMd5Key, $channelMd5Key);
         }
     }
 
     public function batchGet($limit = 200) {
-        $this->initConnection();
-        $messageCount = $this->channel->queue_declare($this->queueName, false, true, false, false);
+        $channel      = self::getChannel($this->config, $this->options, $this->queueName);
+        $messageCount = $channel->queue_declare($this->queueName, false, true, false, false);
         if (!$messageCount) {
             return [];
         }
-        $i    = 0;
-        $max  = $limit < 200 ? $limit : 200;
-        $data = [];
-        while ($i < $messageCount[1] && $i < $max) {
-            $msg = $this->channel->basic_get($this->queueName);
-            $this->channel->basic_ack($msg->delivery_info['delivery_tag']);
-            $data[] = json_decode($msg->body, true);
-            $i++;
+        try {
+            $i    = 0;
+            $max  = $limit < 200 ? $limit : 200;
+            $data = [];
+            while ($i < $messageCount[1] && $i < $max) {
+                $msg = $channel->basic_get($this->queueName);
+                $channel->basic_ack($msg->delivery_info['delivery_tag']);
+                $data[] = json_decode($msg->body, true);
+                $i++;
+            }
+        } catch (\Exception $e) {
+            $connMd5Key = md5(json_encode($this->config));
+            if (self::isConnected($connMd5Key)) {
+                self::logInfo("rabbitmq操作失败:" . $e->getMessage());
+                throw $e;
+            }
+            $channelMd5Key = md5(json_encode([$this->config, $this->queueName]));
+            self::close($connMd5Key, $channelMd5Key);
         }
+
         return $data;
     }
 
-    public function isConnected() {
-        if (!is_null($this->connection) && $this->connection->isConnected()) {
-            $this->logInfo("连接正常");
+    public static function isConnected($connMd5Key) {
+
+        if (!is_null(self::$conns[$connMd5Key]) && self::$conns[$connMd5Key]->isConnected()) {
+            self::logInfo("连接正常");
             return true;
         }
-        $this->logInfo("连接异常");
+        self::logInfo("连接异常");
         return false;
     }
 
     public function setLogger($logger = null, $logDebug = true) {
         if ($logger) {
-            $this->logger   = $logger;
-            $this->logDebug = $logDebug;
+            self::$logger   = $logger;
+            self::$logDebug = $logDebug;
         }
     }
 
@@ -300,36 +250,58 @@ class YdRabbitMq {
         }
     }
 
-    public function close() {
-        $this->logInfo("断开连接");
+    public static function close($connMd5Key = '', $channelMd5Key = '') {
+        self::logInfo("断开连接");
         try {
-            if (is_object($this->connection)
-                && $this->connection instanceof AMQPStreamConnection) {
-                $this->connection->close();
+            if ($channelMd5Key && is_object(self::$channels[$channelMd5Key])
+                && self::$channels[$channelMd5Key] instanceof AMQPChannel) {
+                self::$channels[$channelMd5Key]->close();
+                unset(self::$channels[$channelMd5Key]);
             }
-            if (is_object($this->channel) && $this->channel instanceof AMQPChannel) {
-                $this->channel->close();
+            if ($connMd5Key && is_object(self::$conns[$connMd5Key])
+                && self::$conns[$connMd5Key] instanceof AMQPStreamConnection) {
+                self::$conns[$connMd5Key]->close();
+                unset(self::$conns[$connMd5Key]);
             }
-            $this->logInfo("rabbitmq关闭连接正常");
+            if (!$connMd5Key && !$channelMd5Key) {
+                if (count(self::$conns)) {
+                    foreach (self::$conns as $k => $v) {
+                        if (is_object($v)
+                            && $v instanceof AMQPChannel) {
+                            $v->close();
+                        }
+                        unset(self::$conns[$k]);
+                    }
+                }
+                if (count(self::$conns)) {
+                    foreach (self::$conns as $k => $v) {
+                        if (is_object($v)
+                            && $v instanceof AMQPStreamConnection) {
+                            $v->close();
+                        }
+                        unset(self::$conns[$k]);
+                    }
+                }
+            }
+            self::logInfo("rabbitmq关闭连接正常");
         } catch (\Exception $e) {
-            $this->logInfo("rabbitmq关闭连接异常");
+            self::logInfo("rabbitmq关闭连接异常");
         }
-
-        $this->connection = null;
-        $this->channel    = null;
     }
 
     public function __destruct() {
-        $this->close();
-        $this->logInfo("销毁");
+        self::close();
+        self::logInfo("销毁");
     }
 
-    public function logInfo($msg = '', $type = 'info') {
-        if (!$this->logDebug) {
+
+    public static function logInfo($msg = '', $type = 'info') {
+        if (!self::$logDebug) {
             return false;
         }
-        if ($this->logger) {
-            $this->logger->$type($msg);
+        if (self::$logger) {
+            $logger = self::$logger;
+            $logger->$type($msg);
         } else {
             $log_type   = [
                 'info'  => 'E_USER_NOTICE',
