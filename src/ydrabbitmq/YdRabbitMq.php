@@ -26,6 +26,8 @@ class YdRabbitMq {
     protected $logger             = null;
     protected $connectionAttempts = 0;
     protected $logDebug           = false;
+    static public $conns = [];
+    static public $channels = [];
 
     protected $defaultsConfig  = [
         'host'     => '127.0.0.1',
@@ -35,6 +37,17 @@ class YdRabbitMq {
         'vhost'    => '/'
     ];
     protected $defaultsOptions = [
+        'insist'             => false,
+        'login_method'       => 'AMQPLAIN',
+        'login_response'     => null,
+        'locale'             => 'en_US',
+        'connection_timeout' => 1.0,
+        'read_write_timeout' => 3.0,
+        'context'            => null,
+        'keepalive'          => true,
+        'heartbeat'          => 0
+    ];
+    static public $defaultOption = [
         'insist'             => false,
         'login_method'       => 'AMQPLAIN',
         'login_response'     => null,
@@ -64,6 +77,64 @@ class YdRabbitMq {
         return self::$_objs[$key];
     }
 
+    static public function connect($cfg, $options) {
+        $md5Key = json_encode($conf);
+        if(!isset(self::$conns[$md5Key])) {
+          self::$conns[$md5Key] = new AMQPStreamConnection(
+            $cfg['host'],
+            $cfg['port'],
+            $cfg['username'],
+            $cfg['password'],
+            $cfg['vhost'],
+            $options['insist'],
+            $options['login_method'],
+            $options['login_response'],
+            $options['locale'],
+            $options['connection_timeout'],
+            $options['read_write_timeout'],
+            $options['context'],
+            $options['keepalive'],
+            $options['heartbeat']
+          );
+        }
+        return return self::$conns[$md5Key];
+    }
+
+    static public function getChannel($cfg, $options, $exchange, $routeKey, $queue, $obj) {
+      $conn = self::connect($cfg, $options);
+      $md5Key = md5(json_encode([$cfg,$exchange, $routeKey, $queue]));
+      if(!isset(self::$channels[$md5Key])) {
+        try {
+          $channel = $conn->channel();
+          $channel->set_ack_handler(
+              function ($message) {
+                  $obj->logInfo("Message ack with content" . $message->getBody());
+              }
+          );
+          $channel->set_nack_handler(
+              function($message) {
+                  $obj->logInfo("Message nack with content" . $message->getBody());
+              }
+          );
+          $channel->set_return_listener(
+              function($replyCode, $replyText, $exchange, $routingKey, $message) {
+                  $obj->logInfo("投递异常返回数据set_return_listener");
+                  $obj->logInfo(var_export($replyCode, 1));
+                  $obj->logInfo(var_export($replyText, 1));
+                  $obj->logInfo(var_export($exchange, 1));
+                  $obj->logInfo(var_export($routingKey, 1));
+                  $obj->logInfo(var_export($message->getBody(), 1));
+              }
+          );
+          $channel->confirm_select();
+          self::$channels[$md5Key] = $channel;
+        } catch (\Exception $e) {
+          $obj->logInfo("rabbitmq连接异常" . var_export($e->getMessage(), 1));
+          $conn->close();
+          return null;
+      }
+      return self::$channels[$md5Key];
+    }
 
     public function initConnection() {
         if ((!$this->connection && !($this->connection instanceof AMQPStreamConnection))
