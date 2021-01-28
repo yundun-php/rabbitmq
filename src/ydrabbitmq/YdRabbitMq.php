@@ -272,13 +272,13 @@ class YdRabbitMq {
                 unset(self::$conns[$connMd5Key]);
             }
             if (!$connMd5Key && !$channelMd5Key) {
-                if (count(self::$conns)) {
-                    foreach (self::$conns as $k => $v) {
+                if (count(self::$channels)) {
+                    foreach (self::$channels as $k => $v) {
                         if (is_object($v)
                             && $v instanceof AMQPChannel) {
                             $v->close();
                         }
-                        unset(self::$conns[$k]);
+                        unset(self::$channels[$k]);
                     }
                 }
                 if (count(self::$conns)) {
