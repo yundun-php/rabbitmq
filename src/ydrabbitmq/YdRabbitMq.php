@@ -34,6 +34,8 @@ class YdRabbitMq {
     protected        $queueName          = '';   //队列名称
     protected        $exchange           = '';    //交换机名称
     protected        $routeKey           = '';    //路由名称
+    private          $connMd5Key         = null;
+    private          $channelMd5Key      = null;
     protected static $logger             = null;
     protected static $connectionAttempts = 0;
     protected static $logDebug           = false;
@@ -66,6 +68,8 @@ class YdRabbitMq {
         $this->exchange  = $queueConf['exchange'];
         $this->routeKey  = $queueConf['routeKey'];
         $this->queueName = $queueConf['queueName'];
+        $this->connMd5Key = self::md5sum($this->config);
+        $this->channelMd5Key = self::md5sum([$this->config, $this->queueName]);
     }
 
     static public function obj(...$params) {
@@ -176,13 +180,13 @@ class YdRabbitMq {
             $channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
             $channel->wait_for_pending_acks_returns();
         } catch (\Exception $e) {
-            $connMd5Key = self::md5sum($this->config);
-            if (self::isConnected($connMd5Key)) {
+            //$connMd5Key = self::md5sum($this->config);
+            if (self::isConnected($this->connMd5Key)) {
                 var_dump(1);
                 throw $e;
             }
-            $channelMd5Key = self::md5sum([$this->config, $this->queueName]);
-            self::close($connMd5Key, $channelMd5Key);
+            //$channelMd5Key = self::md5sum([$this->config, $this->queueName]);
+            self::close($this->connMd5Key, $this->channelMd5Key);
             return $this->publish($data);
         }
 
@@ -203,13 +207,13 @@ class YdRabbitMq {
                 $channel->wait();
             }
         } catch (\Exception $e) {
-            $connMd5Key = md5(json_encode($this->config));
-            if (self::isConnected($connMd5Key)) {
+            //$connMd5Key = self::md5sum($this->config);
+            if (self::isConnected($this->connMd5Key)) {
                 self::logInfo("rabbitmq操作失败:" . $e->getMessage());
                 throw $e;
             }
-            $channelMd5Key = md5(json_encode([$this->config, $this->queueName]));
-            self::close($connMd5Key, $channelMd5Key);
+            //$channelMd5Key = self::md5sum([$this->config, $this->queueName]);
+            self::close($this->connMd5Key, $this->channelMd5Key);
         }
     }
 
@@ -230,13 +234,13 @@ class YdRabbitMq {
                 $i++;
             }
         } catch (\Exception $e) {
-            $connMd5Key = md5(json_encode($this->config));
-            if (self::isConnected($connMd5Key)) {
+            //$connMd5Key = self::md5sum($this->config);
+            if (self::isConnected($this->connMd5Key)) {
                 self::logInfo("rabbitmq操作失败:" . $e->getMessage());
                 throw $e;
             }
-            $channelMd5Key = md5(json_encode([$this->config, $this->queueName]));
-            self::close($connMd5Key, $channelMd5Key);
+            //$channelMd5Key = self::md5sum([$this->config, $this->queueName]);
+            self::close($this->connMd5Key, $this->channelMd5Key);
         }
 
         return $data;
