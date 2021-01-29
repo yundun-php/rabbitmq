@@ -22,9 +22,9 @@ $config          = [
 ];
 $options         = [];
 $queueConf = [
-    "queueName" => "mq.adu.test",
+    "queueName" => "mq.adu.test.a",
     "exchange"  => 'ex.adu',
-    "routeKey"  => 'rk.adu.test'
+    "routeKey"  => 'rk.adu.test.a'
 ];
 $rabbitMqConsume = new YdRabbitMq($config, $queueConf, $options);
 $rabbitMqConsume->setLogger($logger,true);
