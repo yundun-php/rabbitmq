@@ -129,13 +129,13 @@ class YdRabbitMq {
     public static function getChannel($cfg, $options, $queue) {
         $md5KeyConn = self::md5sum($cfg);
         $md5KeyChannel = self::md5sum([$cfg, $queue]);
-        if (!isset(self::$channels[$md5KeyChannel])) {
+        //channel或连接不存在
+        if(!isset(self::$channels[$md5KeyConn]) || !isset(self::$channels[$md5KeyConn][$md5KeyChannel])) {
             $conn = self::connect($cfg, $options);
             try {
                 $channel = $conn->channel();
                 $channel->set_ack_handler(
                     function ($message) {
-
                         self::logInfo("Message ack with content" . $message->getBody());
                     }
                 );
