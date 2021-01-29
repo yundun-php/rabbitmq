@@ -298,14 +298,18 @@ class YdRabbitMq {
                 return true;
             }
             //关闭连接下所有的channel
-            foreach(self::$channels[$connMd5Key] as $md5Key => $channel) {
-                if(self::$channels[$channelMd5Key] instanceof AMQPChannel) {
-                    self::$channels[$connMd5Key][$md5Key]->close();
-                    self::logInfo("关闭RabbitMQ连接[{$connMd5Key}]下channel[{$channelMd5Key}]成功");
-                } else {
-                    self::logInfo("RabbitMQ连接[{$connMd5Key}]下channel[{$channelMd5Key}]类型不正确，将直接销毁变量");
+            if(isset(self::$channels[$connMd5Key]) && is_array(self::$channels[$connMd5Key])) {
+                foreach(self::$channels[$connMd5Key] as $md5Key => $channel) {
+                    if(self::$channels[$channelMd5Key] instanceof AMQPChannel) {
+                        self::$channels[$connMd5Key][$md5Key]->close();
+                        self::logInfo("关闭RabbitMQ连接[{$connMd5Key}]下channel[{$channelMd5Key}]成功");
+                    } else {
+                        self::logInfo("RabbitMQ连接[{$connMd5Key}]下channel[{$channelMd5Key}]类型不正确，将直接销毁变量");
+                    }
+                    unset(self::$channels[$connMd5Key][$md5Key]);
                 }
-                unset(self::$channels[$connMd5Key][$md5Key]);
+            } else {
+                self::logInfo("RabbitMQ连接[{$connMd5Key}]下没有channel");
             }
             //关闭连接
             //if(self::$conns[$connMd5Key] instanceof AMQPStreamConnection) {
