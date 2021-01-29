@@ -14,17 +14,17 @@ use Yd\YdRabbitMq;
 $logger = new \Monolog\Logger('ydrabbitmqc');   //测试使用 实际代码中使用loges相关
 $logger->pushHandler(new \Monolog\Handler\StreamHandler('/tmp/ydrabbitmqa.log', \Monolog\Logger::INFO));
 $config          = [
-    "host"     => '127.0.0.1',
-    "port"     => 5671,
+    "host"     => '172.16.100.126',
+    "port"     => 5670,
     "vhost"    => '/',
     "username" => 'tester',
     "password" => 'tester',
 ];
 $options         = [];
 $queueConf = [
-    "queueName" => "mq.adu.test",
+    "queueName" => "mq.adu.test.b",
     "exchange"  => 'ex.adu',
-    "routeKey"  => 'rk.adu.test'
+    "routeKey"  => 'rk.adu.test.b'
 ];
 $rabbitMqConsume = new YdRabbitMq($config, $queueConf, $options);
 $rabbitMqConsume->setLogger($logger,true);
