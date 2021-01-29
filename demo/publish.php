@@ -14,8 +14,11 @@ use Yd\YdRabbitMq;
 $logger = new \Monolog\Logger('ydrabbitmq');   //测试使用 实际代码中使用loges相关
 $logger->pushHandler(new \Monolog\Handler\StreamHandler('/tmp/ydrabbitmq.log', \Monolog\Logger::INFO));
 $config = [
-    "host"     => '127.0.0.1',
-    "port"     => 5671,
+    //"host"     => '127.0.0.1',
+    //"port"     => 5671,
+    //"host"     => '172.16.100.126',
+    "host"     => '172.16.100.188',
+    "port"     => 5670,
     "vhost"    => '/',
     "username" => 'tester',
     "password" => 'tester',
