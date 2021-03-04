@@ -56,7 +56,7 @@ class YdRabbitMq {
         'read_write_timeout' => 3.0,
         'context'            => null,
         'keepalive'          => true,
-        'heartbeat'          => 0
+        'heartbeat'          => 10
     ];
     private static $_objs;
 
