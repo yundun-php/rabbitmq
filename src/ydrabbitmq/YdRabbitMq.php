@@ -43,7 +43,7 @@ class YdRabbitMq {
         'read_write_timeout' => 3.0,
         'context'            => null,
         'keepalive'          => true,
-        'heartbeat'          => 0
+        'heartbeat'          => 10
     ];
 
     public function __construct($connectionConfig = [], $queueConf = [], $options = []) {
@@ -160,16 +160,12 @@ class YdRabbitMq {
             }
             $this->channel->basic_qos(null, $prefetch_count, null);
             $this->channel->basic_consume($this->queueName, $consumerTag, false, false, false, false, $callback);
-
             while ($this->channel->is_consuming()) {
                 $this->channel->wait();
             }
-        } catch (\Exception $e) {
-            if ($this->isConnected()) {
-                $this->logInfo("rabbitmq操作失败:" . $e->getMessage());
-                throw new \Exception($e->getMessage());
-            }
-            $this->close();
+        }catch (\Exception $e) {
+            $this->logInfo("rabbitmq_channel异常:" . $e->getMessage());
+            throw  $e;
         }
     }
 
