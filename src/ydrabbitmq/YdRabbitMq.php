@@ -43,7 +43,7 @@ class YdRabbitMq {
         'read_write_timeout' => 3.0,
         'context'            => null,
         'keepalive'          => true,
-        'heartbeat'          => 10
+        'heartbeat'          => 0
     ];
 
     public function __construct($connectionConfig = [], $queueConf = [], $options = []) {
