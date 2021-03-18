@@ -103,9 +103,7 @@ class YdRabbitMq {
                 );
                 self::$conns[$md5KeyConn] = $Connection;
             } catch (\Exception $e) {
-                var_dump(self::$connectionAttempts);
                 self::logInfo("rabbitmq连接异常" . var_export($e->getMessage(), 1));
-                var_dump(self::$connectionAttempts < self::MAX_ATTEMPTS);
                 while (self::$connectionAttempts < self::MAX_ATTEMPTS && !self::isConnected($md5KeyConn)) {
                     self::close($md5KeyConn);
                     self::logInfo("重试连接第" . (self::$connectionAttempts + 1) . "次");
@@ -122,16 +120,22 @@ class YdRabbitMq {
         return self::$conns[$md5KeyConn];
     }
 
-    public static function getChannel($cfg, $options, $queue) {
+    /**
+     * $cfg 配置
+     * $options 可选项
+     * $queue 队列
+     * $useType 使用类型，publish/consumer，不同的使用方式，channel不共用
+     */
+    public static function getChannel($cfg, $options, $queue, $channelUseType) {
         $md5KeyConn = self::md5sum($cfg);
-        $md5KeyChannel = self::md5sum([$cfg, $queue]);
+        $md5KeyChannel = self::md5sum([$cfg, $queue, ['use_type' => $channelUseType]]);
         //channel或连接不存在
         if(!isset(self::$channels[$md5KeyConn]) || !isset(self::$channels[$md5KeyConn][$md5KeyChannel])) {
-            $conn = self::connect($cfg, $options);
             try {
+                $conn = self::connect($cfg, $options);
                 $channel = $conn->channel();
                 $channel->set_ack_handler(
-                    function ($message) {
+                    function($message) {
                         self::logInfo("Message ack with content" . $message->getBody());
                     }
                 );
@@ -153,6 +157,10 @@ class YdRabbitMq {
                 $channel->confirm_select();
                 if(!isset(self::$channels[$md5KeyConn])) self::$channels[$md5KeyConn] = [];
                 self::$channels[$md5KeyConn][$md5KeyChannel] = $channel;
+            } catch (\PhpAmqpLib\Exception\AMQPConnectionClosedException $e) {
+                self::logInfo("getChannel AMQPConnectionClosedException:" . $e->getMessage());
+                unset(self::$channels[$md5KeyConn], self::$conns[$md5KeyConn]);
+                throw $e;
             } catch (\Exception $e) {
                 self::logInfo("getChannel Exception:" . $e->getMessage());
                 throw  $e;
@@ -162,6 +170,7 @@ class YdRabbitMq {
     }
 
     public function publish($data) {
+        $channelUseType = 'publish';
         $message = $data;
         if (!is_array($message) && !is_string($message)) {
             return false;
@@ -169,52 +178,72 @@ class YdRabbitMq {
         if (is_array($message)) {
             $message = json_encode($message);
         }
-        $channel = self::getChannel($this->config, $this->options, $this->queueName);
+        $i = 3;
         $flag    = true;
-        $msg     = new AMQPMessage($message);
-        try {
-            $channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
-            $channel->wait_for_pending_acks_returns();
-        } catch (\Exception $e) {
-            $connMd5Key = self::md5sum($this->config);
-            if (self::isConnected($connMd5Key)) {
-                var_dump(1);
+        while($i--) {
+            try {
+                $channel = self::getChannel($this->config, $this->options, $this->queueName, $channelUseType);
+                $msg     = new AMQPMessage($message);
+                $channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
+                $channel->wait_for_pending_acks_returns();
+                $flag = true;
+                break;
+            } catch (\PhpAmqpLib\Exception\AMQPConnectionClosedException $e) {
+                $flag = false;
+                if($i > 0) {
+                    continue;
+                }
+                //重试3次，最后一次抛异常
+                self::logInfo("RabbitMQ发送数据失败，已重试3次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   AMQPConnectionClosedException: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
+                throw $e;
+            } catch (\Exception $e) {
+                $connMd5Key = self::md5sum($this->config);
+                if(self::isConnected($connMd5Key)) {
+                    throw $e;
+                }
+                $channelMd5Key = self::md5sum([$this->config, $this->queueName, ['use_type' => $channelUseType]]);
+                self::close($connMd5Key, $channelMd5Key);
+                $flag = false;
+                if($i > 0) {
+                    continue;
+                }
+                self::logInfo("RabbitMQ发送数据失败，已重试3次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   Exception: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
                 throw $e;
             }
-            $channelMd5Key = self::md5sum([$this->config, $this->queueName]);
-            self::close($connMd5Key, $channelMd5Key);
-            return $this->publish($data);
+            //return $this->publish($data);
         }
 
         return $flag;
     }
 
-
     public function consume($callback, $consumerTag = '', $prefetch_count = 1) {
-        $channel = self::getChannel($this->config, $this->options, $this->queueName);
+        $channelUseType = 'consumer';
+        //消费者没有自动重连，需要业务中自己处理
+        $channel = self::getChannel($this->config, $this->options, $this->queueName, $channelUseType);
         try {
-            if (empty($consumerTag)) {
+            if(empty($consumerTag)) {
                 $consumerTag = self::CONSUMER_TAG . "_" . mb_substr(md5(time()), 0, 5);
             }
             $channel->basic_qos(null, $prefetch_count, null);
             $channel->basic_consume($this->queueName, $consumerTag, false, false, false, false, $callback);
 
-            while ($channel->is_consuming()) {
+            while($channel->is_consuming()) {
                 $channel->wait();
             }
-        } catch (\Exception $e) {
+        } catch(\Exception $e) {
             $connMd5Key = self::md5sum($this->config);
-            if (self::isConnected($connMd5Key)) {
+            if(self::isConnected($connMd5Key)) {
                 self::logInfo("rabbitmq操作失败:" . $e->getMessage());
                 throw $e;
             }
-            $channelMd5Key = self::md5sum([$this->config, $this->queueName]);
+            $channelMd5Key = self::md5sum([$this->config, $this->queueName, ['use_type' => $channelUseType]]);
             self::close($connMd5Key, $channelMd5Key);
         }
     }
 
     public function batchGet($limit = 200) {
-        $channel      = self::getChannel($this->config, $this->options, $this->queueName);
+        $channelUseType = 'consumer';
+        $channel      = self::getChannel($this->config, $this->options, $this->queueName, $channelUseType);
         $messageCount = $channel->queue_declare($this->queueName, false, true, false, false);
         if (!$messageCount) {
             return [];
@@ -235,7 +264,7 @@ class YdRabbitMq {
                 self::logInfo("rabbitmq操作失败:" . $e->getMessage());
                 throw $e;
             }
-            $channelMd5Key = self::md5sum([$this->config, $this->queueName]);
+            $channelMd5Key = self::md5sum([$this->config, $this->queueName, ['use_type' => $channelUseType]]);
             self::close($connMd5Key, $channelMd5Key);
         }
 
