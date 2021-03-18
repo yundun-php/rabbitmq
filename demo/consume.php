@@ -2,7 +2,7 @@
 /**
  * @node_name 导航权限节点描述
  * Desc: 功能描述
- * Created by PhpStorm.
+ * Created by PhpStorm
  * User: 杜一凡 | <duyifan@yundun.com>
  * Date: 2020/7/9 11:28
  */
@@ -40,16 +40,4 @@ while (1){
     $i++;
     echo "结束".$i."\r\n";
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
