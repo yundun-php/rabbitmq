@@ -179,7 +179,9 @@ class YdRabbitMq {
             $message = json_encode($message);
         }
         //默认设置重试200次，每次休眠100毫秒
-        $i = 200;
+
+        $replyTotal = 200;
+        $i = $replyTotal;
         $flag    = true;
         while($i--) {
             try {
@@ -192,7 +194,7 @@ class YdRabbitMq {
             } catch (\PhpAmqpLib\Exception\AMQPConnectionClosedException $e) {
                 $flag = false;
                 //重试，最后一次抛异常
-                self::logInfo("RabbitMQ发送数据失败，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   AMQPConnectionClosedException: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
+                self::logInfo("RabbitMQ发送数据失败，共重试 {$replyTotal} 次，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   AMQPConnectionClosedException: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
                 usleep(100);
                 if($i > 0) {
                     continue;
@@ -200,7 +202,8 @@ class YdRabbitMq {
                 // 超过了重试次数
                 throw $e;
             } catch (\Exception $e) {
-                self::logInfo("RabbitMQ发送数据失败，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   Exception: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
+                $flag = false;
+                self::logInfo("RabbitMQ发送数据失败，共重试 {$replyTotal} 次，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   Exception: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
                 $connMd5Key = self::md5sum($this->config);
                 $channelMd5Key = self::md5sum([$this->config, $this->queueName, ['use_type' => $channelUseType]]);
                 //连接正常时，抛出异常
@@ -210,7 +213,6 @@ class YdRabbitMq {
                 //连接不正常时，关闭连接
                 self::close($connMd5Key, $channelMd5Key);
                 usleep(100);
-                $flag = false;
                 if($i > 0) {
                     continue;
                 }
