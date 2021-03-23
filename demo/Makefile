@@ -1,10 +1,26 @@
 help:
+	@echo "make single_start  启动单节点"
+	@echo "make single_stop   停止单节点"
 	@echo "make cluster_start 启动集群"
+	@echo "make cluster_stop  停止集群"
 	@echo "make cluster_join  加入集群"
 
+single_start:
+	docker-compose rm -f -s rabbitmq_single
+	rm -rf ./docker_data/rabbitmq_single
+	mkdir -p ./docker_data/rabbitmq_single/
+	docker-compose up --no-start rabbitmq_single
+	docker-compose start rabbitmq_single
+
+single_stop:
+	docker-compose stop rabbitmq_single
+
 cluster_start:
-	docker-compose rm -f -s
-	rm -rf ./docker_data/*
+	docker-compose rm -f -s rabbitmq_cluster1 rabbitmq_cluster2 rabbitmq_cluster3 rabbitmq_cluster4
+	rm -rf ./docker_data/rabbitmq_cluster1
+	rm -rf ./docker_data/rabbitmq_cluster2
+	rm -rf ./docker_data/rabbitmq_cluster3
+	rm -rf ./docker_data/rabbitmq_cluster4
 	mkdir -p ./docker_data/rabbitmq_cluster1/
 	mkdir -p ./docker_data/rabbitmq_cluster2/
 	mkdir -p ./docker_data/rabbitmq_cluster3/
@@ -13,8 +29,11 @@ cluster_start:
 	echo 'e289b196fc8dad249ab9fba4e6796672' > ./docker_data/rabbitmq_cluster2/.erlang.cookie
 	echo 'e289b196fc8dad249ab9fba4e6796672' > ./docker_data/rabbitmq_cluster3/.erlang.cookie
 	echo 'e289b196fc8dad249ab9fba4e6796672' > ./docker_data/rabbitmq_cluster4/.erlang.cookie
-	docker-compose up --no-start
-	docker-compose start
+	docker-compose up --no-start rabbitmq_cluster1 rabbitmq_cluster2 rabbitmq_cluster3 rabbitmq_cluster4
+	docker-compose start rabbitmq_cluster1 rabbitmq_cluster2 rabbitmq_cluster3 rabbitmq_cluster4
+
+cluster_stop:
+	docker-compose stop rabbitmq_cluster1 rabbitmq_cluster2 rabbitmq_cluster3 rabbitmq_cluster4
 
 cluster_join:
 	#进入rabbitmq_cluster1容器，重新初始化一下，如果是新安装则reset可以忽略重置
