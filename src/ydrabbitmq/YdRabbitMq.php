@@ -260,7 +260,7 @@ class YdRabbitMq {
     }
 
     public function batchGet($limit = 200) {
-        $channelUseType = 'consumer';
+        $channelUseType = 'batchGet';
         $channel      = self::getChannel($this->config, $this->options, $this->queueName, $channelUseType);
         $messageCount = $channel->queue_declare($this->queueName, false, true, false, false);
         if (!$messageCount) {
