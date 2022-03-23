@@ -234,6 +234,58 @@ class YdRabbitMq {
         return $flag;
     }
 
+    public function batchPublish($messages) {
+        $channelUseType = 'publish';
+        //默认设置重试200次，每次休眠100毫秒
+
+        $usleep = 100 * 1000;   //每次重试，休眠100毫秒
+        $i = self::$replyTotalPublish;
+        $flag    = true;
+        while($i--) {
+            try {
+                $channel = self::getChannel($this->config, $this->options, $this->queueName, $channelUseType);
+                foreach($messages as $message) {
+                    if (!is_array($message) && !is_string($message)) continue;
+                    if (is_array($message)) $message = json_encode($message);
+                    $msg = new AMQPMessage($message);
+                    $channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
+                }
+                $channel->wait_for_pending_acks_returns();
+                $flag = true;
+                break;
+            } catch (\PhpAmqpLib\Exception\AMQPConnectionClosedException $e) {
+                $flag = false;
+                //重试，最后一次抛异常
+                self::logInfo("RabbitMQ发送数据失败，共重试 ".self::$replyTotalPublish." 次，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   AMQPConnectionClosedException: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
+                usleep($usleep);
+                if($i > 0) {
+                    continue;
+                }
+                // 超过了重试次数
+                throw $e;
+            } catch (\Exception $e) {
+                $flag = false;
+                self::logInfo("RabbitMQ发送数据失败，共重试 ".self::$replyTotalPublish." 次，已重试 {$i} 次，exchange[{$this->exchange}] route[{$this->routeKey}] queue[{$this->queueName}] body: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."   Exception: ".$e->getMessage()."    trace: ".$e->getTraceAsString());
+                $connMd5Key = self::md5sum($this->config);
+                $channelMd5Key = self::md5sum([$this->config, $this->queueName, ['use_type' => $channelUseType]]);
+                //连接正常时，抛出异常
+                if(self::isConnected($connMd5Key)) {
+                    throw $e;
+                }
+                //连接不正常时，关闭连接
+                self::close($connMd5Key, $channelMd5Key);
+                usleep($usleep);
+                if($i > 0) {
+                    continue;
+                }
+                // 超过了重试次数
+                throw $e;
+            }
+        }
+
+        return $flag;
+    }
+
     public function consume($callback, $consumerTag = '', $prefetch_count = 1) {
         $channelUseType = 'consumer';
         //消费者没有自动重连，需要业务中自己处理
