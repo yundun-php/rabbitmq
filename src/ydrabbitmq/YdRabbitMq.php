@@ -235,9 +235,9 @@ class YdRabbitMq {
     }
 
     public function batchPublish($messages) {
+        if(!is_array($messages)) return false;
         $channelUseType = 'publish';
         //默认设置重试200次，每次休眠100毫秒
-
         $usleep = 100 * 1000;   //每次重试，休眠100毫秒
         $i = self::$replyTotalPublish;
         $flag    = true;
