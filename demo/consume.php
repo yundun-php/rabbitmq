@@ -2,7 +2,7 @@
 /**
  * @node_name 导航权限节点描述
  * Desc: 功能描述
- * Created by PhpStorm.
+ * Created by PhpStorm
  * User: 杜一凡 | <duyifan@yundun.com>
  * Date: 2020/7/9 11:28
  */
@@ -22,9 +22,9 @@ $config          = [
 ];
 $options         = [];
 $queueConf = [
-    "queueName" => "mq.adu.test",
+    "queueName" => "mq.adu.test.b",
     "exchange"  => 'ex.adu',
-    "routeKey"  => 'rk.adu.test'
+    "routeKey"  => 'rk.adu.test.b'
 ];
 $rabbitMqConsume = new YdRabbitMq($config, $queueConf, $options);
 $rabbitMqConsume->setLogger($logger,true);
@@ -40,16 +40,4 @@ while (1){
     $i++;
     echo "结束".$i."\r\n";
 }
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -3,3 +3,4 @@
 vendor
 vendor/*
 composer.lock
+demo/docker_data/

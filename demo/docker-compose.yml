@@ -1,0 +1,129 @@
+version: "3.7"
+networks:
+    rabbitmq:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.20.3.1/24
+services:
+  rabbitmq_single:
+    container_name: rabbitmq_single
+    image: rabbitmq:3.8.11-management
+    ports:
+      - 6670:5672
+      - 16670:15672
+    volumes:
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./docker_data/rabbitmq_single/:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: tester
+      RABBITMQ_DEFAULT_PASS: tester
+      RABBITMQ_LOGS:
+      RABBITMQ_LOG_BASE: /var/log/rabbitmq
+    hostname: rabbitmq
+    extra_hosts:
+      rabbitmq_single: 172.20.3.10
+      rabbitmq_cluster1: 172.20.3.11
+      rabbitmq_cluster2: 172.20.3.12
+      rabbitmq_cluster3: 172.20.3.13
+      rabbitmq_cluster4: 172.20.3.14
+    networks:
+      rabbitmq:
+        ipv4_address: 172.20.3.10
+  rabbitmq_cluster1:
+    container_name: rabbitmq_cluster1
+    image: rabbitmq:3.8.11-management
+    ports:
+      - 6671:5672
+      - 16671:15672
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+      - ./docker_data/rabbitmq_cluster1/:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_NODENAME: node1
+      RABBITMQ_DEFAULT_USER: tester
+      RABBITMQ_DEFAULT_PASS: tester
+    hostname: rabbitmq_cluster1
+    extra_hosts:
+      rabbitmq_single: 172.20.3.10
+      rabbitmq_cluster1: 172.20.3.11
+      rabbitmq_cluster2: 172.20.3.12
+      rabbitmq_cluster3: 172.20.3.13
+      rabbitmq_cluster4: 172.20.3.14
+    networks:
+      rabbitmq:
+        ipv4_address: 172.20.3.11
+  rabbitmq_cluster2:
+    container_name: rabbitmq_cluster2
+    image: rabbitmq:3.8.11-management
+    ports:
+      - 6672:5672
+      - 16672:15672
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+      - ./docker_data/rabbitmq_cluster2/:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_NODENAME: node2
+      RABBITMQ_DEFAULT_USER: tester
+      RABBITMQ_DEFAULT_PASS: tester
+    hostname: cluster_rabbitmq2
+    extra_hosts:
+      rabbitmq_single: 172.20.3.10
+      rabbitmq_cluster1: 172.20.3.11
+      rabbitmq_cluster2: 172.20.3.12
+      rabbitmq_cluster3: 172.20.3.13
+      rabbitmq_cluster4: 172.20.3.14
+    networks:
+      rabbitmq:
+        ipv4_address: 172.20.3.12
+  rabbitmq_cluster3:
+    container_name: rabbitmq_cluster3
+    image: rabbitmq:3.8.11-management
+    ports:
+      - 6673:5672
+      - 16673:15672
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+      - ./docker_data/rabbitmq_cluster3/:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_NODENAME: node3
+      RABBITMQ_DEFAULT_USER: tester
+      RABBITMQ_DEFAULT_PASS: tester
+    hostname: rabbitmq_cluster3
+    extra_hosts:
+      rabbitmq_single: 172.20.3.10
+      rabbitmq_cluster1: 172.20.3.11
+      rabbitmq_cluster2: 172.20.3.12
+      rabbitmq_cluster3: 172.20.3.13
+      rabbitmq_cluster4: 172.20.3.14
+    networks:
+      rabbitmq:
+        ipv4_address: 172.20.3.13
+  rabbitmq_cluster4:
+    container_name: rabbitmq_cluster4
+    image: rabbitmq:3.8.11-management
+    ports:
+      - 6674:5672
+      - 16674:15672
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+      - ./docker_data/rabbitmq_cluster4/:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_NODENAME: node4
+      RABBITMQ_DEFAULT_USER: tester
+      RABBITMQ_DEFAULT_PASS: tester
+    hostname: rabbitmq_cluster4
+    extra_hosts:
+      rabbitmq_single: 172.20.3.10
+      rabbitmq_cluster1: 172.20.3.11
+      rabbitmq_cluster2: 172.20.3.12
+      rabbitmq_cluster3: 172.20.3.13
+      rabbitmq_cluster4: 172.20.3.14
+    networks:
+      rabbitmq:
+        ipv4_address: 172.20.3.14

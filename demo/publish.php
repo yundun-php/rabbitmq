@@ -29,16 +29,35 @@ $queueConf = [
 $options   = [];
 
 $rabbitMqPublish = new YdRabbitMq($config, $queueConf, $options);
+//$rabbitMqPublish = YdRabbitMq::obj($config, $queueConf, $options);
 $rabbitMqPublish->setLogger($logger,true);
 $i               = 1;
-while ($i < 2) {
+while ($i < 10000000) {
     $msg = [
+        'queue' => 'queueConfa',
         'data' => "test" . mt_rand(1000, 9999),
         'time' => date('Y-m-d H:i:s')
     ];
     var_dump("添加数据", $msg);
     $res = $rabbitMqPublish->publish($msg);
     var_dump("返回结果", $res);
+    $msg = [
+        'queue' => 'queueConfb',
+        'data' => "test" . mt_rand(1000, 9999),
+        'time' => date('Y-m-d H:i:s')
+    ];
+    var_dump("添加数据", $msg);
+    $res = $rabbitMqPublish->publish($msg);
+    var_dump("返回结果", $res);
+    $msg = [
+        'queue' => 'queueConfc',
+        'data' => "test" . mt_rand(1000, 9999),
+        'time' => date('Y-m-d H:i:s')
+    ];
+    var_dump("添加数据", $msg);
+    $res = $rabbitMqPublish->publish($msg);
+    var_dump("返回结果", $res);
+    sleep(1);
     $i++;
 }
 
