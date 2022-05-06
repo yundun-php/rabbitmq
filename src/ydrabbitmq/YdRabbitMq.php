@@ -286,29 +286,6 @@ class YdRabbitMq {
         return $flag;
     }
 
-    public function batchPublish($messages) {
-        if(!is_array($messages)) return false;
-        $this->initConnection();
-        $flag = true;
-        try {
-            foreach($messages as $message) {
-                if (!is_array($message) && !is_string($message)) continue;
-                if (is_array($message)) $message = json_encode($message);
-                $msg  = new AMQPMessage($message);
-                $this->channel->basic_publish($msg, $this->exchange, $this->routeKey, true);
-            }
-            $this->channel->wait_for_pending_acks_returns();
-        } catch (\Exception $e) {
-            if ($this->isConnected()) {
-                throw new \Exception($e->getMessage());
-            }
-            $this->close();
-            return $this->publish($data);
-        }
-
-        return $flag;
-    }
-
     public function consume($callback, $consumerTag = '', $prefetch_count = 1) {
         $channelUseType = 'consumer';
         //消费者没有自动重连，需要业务中自己处理
